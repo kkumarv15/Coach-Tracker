@@ -1,8 +1,10 @@
 // Coaching Tracker App - Main JavaScript File
-// Data Storage using LocalStorage
+// Data is loaded/saved via backend API (/api) backed by PostgreSQL
 
 class CoachingTracker {
     constructor() {
+        this.apiBase = '/api';
+        this.dataLoaded = false;
         this.currentUser = null;
         this.coachees = [];
         this.sessions = [];
@@ -11,32 +13,47 @@ class CoachingTracker {
         this.editingCoachee = null;
         this.editingSession = null;
         this.editingSource = null;
-        this.init();
+        this.init().catch((error) => {
+            console.error('Failed to initialize app:', error);
+            this.showToast('Database/API unavailable. Login is still available, but data actions will fail until backend is up.', 'error');
+        });
     }
 
-    init() {
-        this.loadData();
-        this.seedDemoDataIfEmpty();
+    async init() {
         this.setupEventListeners();
         this.checkAuth();
+        await this.syncDataFromServer();
+    }
+
+    async syncDataFromServer() {
+        await this.loadData();
+        await this.seedDemoDataIfEmpty();
+        this.dataLoaded = true;
+
+        if (this.currentUser) {
+            this.refreshAllData();
+        }
     }
 
     // ==================== DATA MANAGEMENT ====================
     
-    loadData() {
-        this.coachees = JSON.parse(localStorage.getItem('coachees') || '[]');
-        this.sessions = JSON.parse(localStorage.getItem('sessions') || '[]');
-        this.sources = JSON.parse(localStorage.getItem('sources') || '[]');
+    async loadData() {
+        const [sources, coachees, sessions] = await Promise.all([
+            this.apiRequest('/sources'),
+            this.apiRequest('/coachees'),
+            this.apiRequest('/sessions')
+        ]);
+        this.sources = sources;
+        this.coachees = coachees;
+        this.sessions = sessions;
         this.currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
     }
 
     saveData() {
-        localStorage.setItem('coachees', JSON.stringify(this.coachees));
-        localStorage.setItem('sessions', JSON.stringify(this.sessions));
-        localStorage.setItem('sources', JSON.stringify(this.sources));
+        // Data is persisted via backend API. Kept as a no-op for backward compatibility.
     }
 
-    seedDemoDataIfEmpty() {
+    async seedDemoDataIfEmpty() {
         const hasExistingData = this.coachees.length > 0 || this.sessions.length > 0 || this.sources.length > 0;
         if (hasExistingData) return;
 
@@ -74,7 +91,7 @@ class CoachingTracker {
             lastUpdated: new Date().toISOString()
         };
 
-        this.sources = [source1, source2, source3];
+        const sources = [source1, source2, source3];
 
         const coachee1 = {
             id: this.generateId(),
@@ -142,9 +159,9 @@ class CoachingTracker {
             lastUpdated: new Date().toISOString()
         };
 
-        this.coachees = [coachee1, coachee2, coachee3, coachee4];
+        const coachees = [coachee1, coachee2, coachee3, coachee4];
 
-        this.sessions = [
+        const sessions = [
             {
                 id: this.generateId(),
                 coacheeId: coachee1.id,
@@ -207,7 +224,36 @@ class CoachingTracker {
             }
         ];
 
-        this.saveData();
+        await this.apiRequest('/seed-demo', {
+            method: 'POST',
+            body: JSON.stringify({ sources, coachees, sessions })
+        });
+
+        await this.loadData();
+    }
+
+    async apiRequest(path, options = {}) {
+        const response = await fetch(`${this.apiBase}${path}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            },
+            ...options
+        });
+
+        if (!response.ok) {
+            let message = `Request failed (${response.status})`;
+            try {
+                const errorBody = await response.json();
+                message = errorBody.error || message;
+            } catch (e) {
+                // ignore JSON parse errors
+            }
+            throw new Error(message);
+        }
+
+        if (response.status === 204) return null;
+        return response.json();
     }
 
     generateId() {
@@ -232,7 +278,15 @@ class CoachingTracker {
     showMainApp() {
         document.getElementById('loginScreen').classList.remove('active');
         document.getElementById('mainApp').classList.add('active');
-        this.refreshAllData();
+
+        if (this.dataLoaded) {
+            this.refreshAllData();
+        } else {
+            this.syncDataFromServer().catch((error) => {
+                console.error(error);
+                this.showToast('Could not load data from server. Please start PostgreSQL and backend.', 'error');
+            });
+        }
     }
 
     login(email, password) {
@@ -256,7 +310,7 @@ class CoachingTracker {
 
     // ==================== COACHEE MANAGEMENT ====================
     
-    addCoachee(data) {
+    async addCoachee(data) {
         const coachee = {
             id: this.generateId(),
             type: data.type,
@@ -264,34 +318,42 @@ class CoachingTracker {
             lastUpdated: new Date().toISOString(),
             ...data
         };
-        this.coachees.push(coachee);
-        this.saveData();
-        return coachee;
+        const created = await this.apiRequest('/coachees', {
+            method: 'POST',
+            body: JSON.stringify(coachee)
+        });
+        this.coachees.push(created);
+        return created;
     }
 
-    updateCoachee(id, data) {
+    async updateCoachee(id, data) {
         const index = this.coachees.findIndex(c => c.id === id);
         if (index !== -1) {
-            this.coachees[index] = {
+            const updatedPayload = {
                 ...this.coachees[index],
                 ...data,
                 lastUpdated: new Date().toISOString()
             };
-            this.saveData();
-            return this.coachees[index];
+
+            const updated = await this.apiRequest(`/coachees/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updatedPayload)
+            });
+            this.coachees[index] = updated;
+            return updated;
         }
         return null;
     }
 
-    deleteCoachee(id) {
+    async deleteCoachee(id) {
         const hasSessions = this.sessions.some(s => s.coacheeId === id);
-        if (hasessions) {
+        if (hasSessions) {
             if (!confirm('This coachee has sessions. Are you sure you want to delete? Historical data will be preserved.')) {
                 return false;
             }
         }
+        await this.apiRequest(`/coachees/${id}`, { method: 'DELETE' });
         this.coachees = this.coachees.filter(c => c.id !== id);
-        this.saveData();
         return true;
     }
 
@@ -306,7 +368,7 @@ class CoachingTracker {
 
     // ==================== SESSION MANAGEMENT ====================
     
-    addSession(data) {
+    async addSession(data) {
         const coachee = this.getCoachee(data.coacheeId);
         const session = {
             id: this.generateId(),
@@ -320,30 +382,38 @@ class CoachingTracker {
             createdOn: new Date().toISOString(),
             lastUpdated: new Date().toISOString()
         };
-        this.sessions.push(session);
-        this.saveData();
-        return session;
+        const created = await this.apiRequest('/sessions', {
+            method: 'POST',
+            body: JSON.stringify(session)
+        });
+        this.sessions.push(created);
+        return created;
     }
 
-    updateSession(id, data) {
+    async updateSession(id, data) {
         const index = this.sessions.findIndex(s => s.id === id);
         if (index !== -1) {
-            this.sessions[index] = {
+            const updatedPayload = {
                 ...this.sessions[index],
                 ...data,
                 duration: parseFloat(data.duration),
                 lastUpdated: new Date().toISOString()
             };
-            this.saveData();
-            return this.sessions[index];
+
+            const updated = await this.apiRequest(`/sessions/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updatedPayload)
+            });
+            this.sessions[index] = updated;
+            return updated;
         }
         return null;
     }
 
-    deleteSession(id) {
+    async deleteSession(id) {
         if (confirm('Are you sure you want to delete this session?')) {
+            await this.apiRequest(`/sessions/${id}`, { method: 'DELETE' });
             this.sessions = this.sessions.filter(s => s.id !== id);
-            this.saveData();
             return true;
         }
         return false;
@@ -359,7 +429,7 @@ class CoachingTracker {
 
     // ==================== SOURCE MANAGEMENT ====================
     
-    addSource(data) {
+    async addSource(data) {
         // Check for duplicate
         if (this.sources.some(s => s.name.toLowerCase() === data.name.toLowerCase())) {
             this.showToast('Source name already exists', 'error');
@@ -373,34 +443,42 @@ class CoachingTracker {
             createdOn: new Date().toISOString(),
             lastUpdated: new Date().toISOString()
         };
-        this.sources.push(source);
-        this.saveData();
-        return source;
+        const created = await this.apiRequest('/sources', {
+            method: 'POST',
+            body: JSON.stringify(source)
+        });
+        this.sources.push(created);
+        return created;
     }
 
-    updateSource(id, data) {
+    async updateSource(id, data) {
         const index = this.sources.findIndex(s => s.id === id);
         if (index !== -1) {
-            this.sources[index] = {
+            const updatedPayload = {
                 ...this.sources[index],
                 ...data,
                 lastUpdated: new Date().toISOString()
             };
-            this.saveData();
-            return this.sources[index];
+
+            const updated = await this.apiRequest(`/sources/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updatedPayload)
+            });
+            this.sources[index] = updated;
+            return updated;
         }
         return null;
     }
 
-    deleteSource(id) {
+    async deleteSource(id) {
         const linkedCoachees = this.coachees.filter(c => c.sourceId === id);
         if (linkedCoachees.length > 0) {
             if (!confirm(`This source has ${linkedCoachees.length} linked coachee(s). Delete anyway?`)) {
                 return false;
             }
         }
+        await this.apiRequest(`/sources/${id}`, { method: 'DELETE' });
         this.sources = this.sources.filter(s => s.id !== id);
-        this.saveData();
         return true;
     }
 
@@ -1438,7 +1516,7 @@ class CoachingTracker {
         dropdown.innerHTML = '<option value="">Select a coachee...</option>' + options;
     }
 
-    saveCoachee(addAnother = false) {
+    async saveCoachee(addAnother = false) {
         const type = document.querySelector('input[name="coacheeType"]:checked').value;
         
         let data = {
@@ -1464,25 +1542,30 @@ class CoachingTracker {
             data.members = document.getElementById('members').value;
         }
 
-        if (this.editingCoachee) {
-            this.updateCoachee(this.editingCoachee, data);
-            this.showToast('Coachee updated successfully!');
-        } else {
-            this.addCoachee(data);
-            this.showToast('Coachee added successfully!');
-        }
+        try {
+            if (this.editingCoachee) {
+                await this.updateCoachee(this.editingCoachee, data);
+                this.showToast('Coachee updated successfully!');
+            } else {
+                await this.addCoachee(data);
+                this.showToast('Coachee added successfully!');
+            }
 
-        this.refreshAllData();
+            this.refreshAllData();
 
-        if (addAnother) {
-            document.getElementById('coacheeForm').reset();
-            this.toggleCoacheeFields();
-        } else {
-            this.closeAllModals();
+            if (addAnother) {
+                document.getElementById('coacheeForm').reset();
+                this.toggleCoacheeFields();
+            } else {
+                this.closeAllModals();
+            }
+        } catch (error) {
+            console.error(error);
+            this.showToast(error.message || 'Failed to save coachee', 'error');
         }
     }
 
-    saveSession(addAnother = false) {
+    async saveSession(addAnother = false) {
         const coacheeId = document.getElementById('sessionCoacheeName').value;
         if (!coacheeId) {
             this.showToast('Please select a coachee', 'error');
@@ -1504,45 +1587,55 @@ class CoachingTracker {
             notes: document.getElementById('sessionNotes').value
         };
 
-        if (this.editingSession) {
-            this.updateSession(this.editingSession, data);
-            this.showToast('Session updated successfully!');
-        } else {
-            this.addSession(data);
-            this.showToast('Session added successfully!');
-        }
+        try {
+            if (this.editingSession) {
+                await this.updateSession(this.editingSession, data);
+                this.showToast('Session updated successfully!');
+            } else {
+                await this.addSession(data);
+                this.showToast('Session added successfully!');
+            }
 
-        this.refreshAllData();
+            this.refreshAllData();
 
-        if (addAnother) {
-            document.getElementById('sessionForm').reset();
-            this.updateSessionCoacheeDropdown();
-        } else {
-            this.closeAllModals();
+            if (addAnother) {
+                document.getElementById('sessionForm').reset();
+                this.updateSessionCoacheeDropdown();
+            } else {
+                this.closeAllModals();
+            }
+        } catch (error) {
+            console.error(error);
+            this.showToast(error.message || 'Failed to save session', 'error');
         }
     }
 
-    saveSource() {
+    async saveSource() {
         const data = {
             name: document.getElementById('sourceName').value,
             country: document.getElementById('sourceCountry').value,
             website: document.getElementById('sourceWebsite').value
         };
 
-        if (this.editingSource) {
-            this.updateSource(this.editingSource, data);
-            this.showToast('Source updated successfully!');
-        } else {
-            const result = this.addSource(data);
-            if (result) {
-                this.showToast('Source added successfully!');
+        try {
+            if (this.editingSource) {
+                await this.updateSource(this.editingSource, data);
+                this.showToast('Source updated successfully!');
             } else {
-                return; // Error already shown
+                const result = await this.addSource(data);
+                if (result) {
+                    this.showToast('Source added successfully!');
+                } else {
+                    return; // Error already shown
+                }
             }
-        }
 
-        this.refreshAllData();
-        this.closeAllModals();
+            this.refreshAllData();
+            this.closeAllModals();
+        } catch (error) {
+            console.error(error);
+            this.showToast(error.message || 'Failed to save source', 'error');
+        }
     }
 
     // ==================== PUBLIC METHODS FOR UI ====================
@@ -1551,10 +1644,15 @@ class CoachingTracker {
         this.openCoacheeModal(id);
     }
 
-    removeCoachee(id) {
-        if (this.deleteCoachee(id)) {
-            this.showToast('Coachee deleted successfully!');
-            this.refreshAllData();
+    async removeCoachee(id) {
+        try {
+            if (await this.deleteCoachee(id)) {
+                this.showToast('Coachee deleted successfully!');
+                this.refreshAllData();
+            }
+        } catch (error) {
+            console.error(error);
+            this.showToast(error.message || 'Failed to delete coachee', 'error');
         }
     }
 
@@ -1562,10 +1660,15 @@ class CoachingTracker {
         this.openSessionModal(id);
     }
 
-    removeSession(id) {
-        if (this.deleteSession(id)) {
-            this.showToast('Session deleted successfully!');
-            this.refreshAllData();
+    async removeSession(id) {
+        try {
+            if (await this.deleteSession(id)) {
+                this.showToast('Session deleted successfully!');
+                this.refreshAllData();
+            }
+        } catch (error) {
+            console.error(error);
+            this.showToast(error.message || 'Failed to delete session', 'error');
         }
     }
 
@@ -1573,10 +1676,15 @@ class CoachingTracker {
         this.openSourceModal(id);
     }
 
-    removeSource(id) {
-        if (this.deleteSource(id)) {
-            this.showToast('Source deleted successfully!');
-            this.refreshAllData();
+    async removeSource(id) {
+        try {
+            if (await this.deleteSource(id)) {
+                this.showToast('Source deleted successfully!');
+                this.refreshAllData();
+            }
+        } catch (error) {
+            console.error(error);
+            this.showToast(error.message || 'Failed to delete source', 'error');
         }
     }
 

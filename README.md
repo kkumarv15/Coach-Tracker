@@ -1,257 +1,132 @@
-# Coaching Tracker App
+# Coaching Tracker App (PostgreSQL Edition)
 
-A comprehensive web-based coaching CRM application for professional coaches to manage clients, track sessions, and analyze coaching data.
+A web-based coaching CRM for managing coachees, sessions, sources, and analytics — now backed by a **Node.js + PostgreSQL** API.
 
-## Features
+## What Changed
 
-### Core Functionality
-- **Coachee Management**: Track individuals, groups, and teams with detailed profiles
-- **Session Logging**: Quick session entry with themes, payment types, and notes
-- **Source Tracking**: Monitor where your clients come from
-- **Analytics Dashboard**: Comprehensive insights into your coaching practice
-- **Lookup Tools**: Quickly find information about coachees, organisations, and sources
+- Replaced browser LocalStorage persistence with backend API persistence.
+- Added Express server (`server.js`) with REST endpoints under `/api/*`.
+- Added PostgreSQL schema (`sql/schema.sql`) and DB bootstrap (`src/db.js`).
+- Frontend (`app.js`) now performs async API CRUD operations.
+- Added `.env.example` for environment configuration.
 
-### Dashboard Analytics
-- Total hours, sessions, and clients with filtering options
-- Session breakdown by payment type, weekday, and year
-- Client demographics (age groups, sex distribution)
-- Top 10 clients and organisations
-- Source effectiveness tracking
-- Average coaching hours per week/month/year
+## Stack
 
-## Getting Started
+- Frontend: HTML, CSS, Vanilla JavaScript, Chart.js
+- Backend: Node.js, Express
+- Database: PostgreSQL
+- DB Driver: `pg`
 
-### Prerequisites
-- A modern web browser (Chrome, Firefox, Safari, or Edge)
-- No installation or server required - runs entirely in your browser
+## Project Structure
 
-### Running the Application
-
-1. **Open the application**:
-   - Simply open `index.html` in your web browser
-   - Or double-click the `index.html` file
-
-2. **Login**:
-   - Email: `admin@coach.com`
-   - Password: `password`
-
-3. **Start using the app**:
-   - Navigate through tabs: Dashboard, Coachees, Sessions, Lookup, Sources
-   - All data is saved automatically in your browser's local storage
-
-## User Guide
-
-### Managing Coachees
-
-**Add a New Coachee**:
-1. Click "Coachees" tab
-2. Click "Add Coachee" button
-3. Select type: Individual, Group, or Team
-4. Fill in the required fields (marked with *)
-5. Click "Save & Close" or "Save & Add Another"
-
-**Individual Fields**:
-- First Name, Second Name
-- Age Group, Sex, Occupation
-- Email, Phone, LinkedIn
-- Organisation, City, Country, Source
-
-**Group/Team Fields**:
-- Group/Team Name
-- Number of Participants
-- Members (free text for notes)
-- Organisation, City, Country, Source
-
-**Edit/Delete**:
-- Use the Edit button to modify coachee details
-- Use the Delete button to remove a coachee (with confirmation)
-
-### Logging Sessions
-
-**Add a Session**:
-1. Click "Sessions" tab
-2. Click "Add Session" button
-3. Select coachee type and name
-4. Enter session date and duration
-5. Select theme(s) - multiple selections allowed:
-   - Habits, Well-being, Productivity
-   - Communication, Career, Relationships
-   - Other Personal, Other Professional
-6. Select payment type: Paid, Pro Bono, or Peer
-7. Add session notes (optional)
-8. Click "Save & Close" or "Save & Add Another"
-
-### Managing Sources
-
-**Add a Source**:
-1. Click "Sources" tab
-2. Click "Add Source" button
-3. Enter source name (required)
-4. Add country and website (optional)
-5. Click "Save"
-
-Sources help you track where your coachees come from (e.g., referral partners, platforms, events).
-
-### Using the Dashboard
-
-**Apply Filters**:
-- Date Range: This Month, This Quarter, This Year, All Time
-- Coachee Type: All, Individual, Group, Team
-- Payment Type: Multiple selections allowed
-- Click "Apply Filters" to refresh all metrics
-
-**Dashboard Sections**:
-1. **KPI Cards**: Quick overview of key metrics
-2. **Charts**: Visual breakdowns of your practice
-3. **Top Lists**: Top 10 clients and organisations
-4. **Average Hours**: Weekly, monthly, and yearly averages
-5. **Data Tables**: Complete lists with search and sort
-
-### Lookup Tools
-
-**Coachee Lookup**:
-1. Click "Lookup" tab
-2. Select "Coachee" sub-tab
-3. Filter by coachee type
-4. Select a coachee from dropdown
-5. View detailed profile, stats, and session history
-
-**Organisation Lookup**:
-1. Select "Organisation" sub-tab
-2. Choose an organisation
-3. View all coachees, sessions, and sources for that organisation
-
-**Source Lookup**:
-1. Select "Source" sub-tab
-2. Choose a source
-3. View all organisations and coachees from that source
-
-## Data Storage
-
-- All data is stored in your browser's **Local Storage**
-- Data persists across browser sessions
-- Data is private and stays on your device
-- **Important**: Clearing browser data will delete all records
-- **Backup**: No automatic backup - consider exporting data periodically
-
-## Technical Details
-
-### Technologies Used
-- HTML5
-- CSS3 (responsive design)
-- Vanilla JavaScript (ES6+)
-- Chart.js for visualizations
-- Local Storage API for data persistence
-
-### Browser Compatibility
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-### File Structure
-```
+```text
 coaching-tracker/
-├── index.html          # Main HTML structure
-├── styles.css          # All styling
-├── app.js             # Application logic
-└── README.md          # This file
+├── app.js
+├── index.html
+├── styles.css
+├── server.js
+├── src/
+│   └── db.js
+├── sql/
+│   └── schema.sql
+├── .env.example
+├── package.json
+└── package-lock.json
 ```
 
-## Features Implemented
+## Setup
 
-### Data Management
-✅ Add, edit, delete coachees (individuals, groups, teams)  
-✅ Add, edit, delete sessions  
-✅ Add, edit, delete sources  
-✅ Automatic ID generation  
-✅ Timestamps for all records  
-✅ Data validation and constraints  
+### 1) Install dependencies
 
-### User Interface
-✅ Login/logout functionality  
-✅ Tab-based navigation  
-✅ Modal forms for data entry  
-✅ Responsive design  
-✅ Toast notifications  
-✅ Search and filter capabilities  
+```bash
+npm install
+```
 
-### Analytics & Reporting
-✅ Dashboard with KPIs  
-✅ Multiple chart types (pie, doughnut, bar, line)  
-✅ Filtering by date range, type, and payment  
-✅ Top 10 lists  
-✅ Average calculations  
-✅ Engagement metrics  
+### 2) Configure environment
 
-### Lookup Features
-✅ Coachee lookup with session history  
-✅ Organisation lookup with coachees list  
-✅ Source lookup with organisations  
-✅ Dynamic dropdown filtering  
+Create a `.env` file in project root (you can copy from `.env.example`):
 
-## Business Rules
+```env
+PORT=3000
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=coaching_tracker
+```
 
-1. **Coachee Constraints**:
-   - Email unique per individual (recommended)
-   - Group/Team name + organisation unique per account
-   - Required fields enforced based on type
+### 3) Create PostgreSQL database
 
-2. **Session Constraints**:
-   - Duration must be > 0
-   - At least one theme required
-   - Must be linked to an existing coachee
+Create the DB manually if it doesn’t exist:
 
-3. **Source Constraints**:
-   - Source name must be unique
-   - Deletion confirmation if linked to coachees
+```sql
+CREATE DATABASE coaching_tracker;
+```
 
-4. **Data Integrity**:
-   - Sessions preserved when deleting coachees (with warning)
-   - Soft-delete approach for historical data
-   - Referential integrity maintained
+> On startup, the app auto-runs `sql/schema.sql` to create tables/indexes.
 
-## Tips for Best Use
+### 4) Start app
 
-1. **Start with Sources**: Add your referral sources first
-2. **Add Coachees**: Complete profiles for better analytics
-3. **Log Sessions Promptly**: Enter sessions soon after they occur
-4. **Review Dashboard Weekly**: Monitor your practice trends
-5. **Use Filters**: Analyze specific time periods or client types
-6. **Check Lookups**: Review individual client progress regularly
+```bash
+npm start
+```
 
-## Future Enhancements
+Open: `http://localhost:3000`
 
-Potential features for future versions:
-- Multi-coach accounts with role-based access
-- Data export (CSV, PDF)
-- Client-facing portal
-- Calendar integration
-- Automated invoicing
-- Email notifications
-- Cloud synchronization
-- Mobile app
+## Local Troubleshooting (important)
 
-## Support
+If login appears to “fail” locally, it is usually because backend startup failed due to DB connectivity.
 
-For issues or questions:
-- Review this README
-- Check browser console for errors
-- Ensure JavaScript is enabled
-- Try a different browser if issues persist
+### 1) Verify PostgreSQL client exists
 
-## License
+```bash
+psql --version
+```
 
-This is a demo application for educational purposes.
+If you get `command not found: psql`, install PostgreSQL first.
 
-## Version
+If installed via Homebrew on Intel Mac, binaries may be at:
 
-Version 1.0.0 - January 2026
+```bash
+/usr/local/opt/postgresql@14/bin/psql --version
+```
 
----
+### 2) Verify DB server is running
 
-**Demo Credentials**:
-- Email: admin@coach.com
-- Password: password
+```bash
+pg_isready -h 127.0.0.1 -p 5432
+```
 
-**Note**: This application stores all data locally in your browser. No data is sent to any server.
+### 3) Verify connection manually with psql
+
+```bash
+PGPASSWORD=postgres psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -c "SELECT 1;"
+```
+
+### 4) Create app DB if needed
+
+```bash
+PGPASSWORD=postgres psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -c "CREATE DATABASE coaching_tracker;"
+```
+
+### 5) Start app
+
+```bash
+npm start
+```
+
+If PostgreSQL is not reachable, the UI now shows a clear message and login screen remains accessible, but data operations require backend+DB to be up.
+
+## API Endpoints
+
+- Health: `GET /api/health`
+- Sources: `GET/POST /api/sources`, `PUT/DELETE /api/sources/:id`
+- Coachees: `GET/POST /api/coachees`, `PUT/DELETE /api/coachees/:id`
+- Sessions: `GET/POST /api/sessions`, `PUT/DELETE /api/sessions/:id`
+- Demo Seed: `POST /api/seed-demo`
+
+## Notes
+
+- Login remains demo-only on frontend (`admin@coach.com / password`).
+- Session records are preserved if linked entities are deleted (`ON DELETE SET NULL`).
+- Demo seed runs automatically if tables are empty.
