@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running security checks..."
+
+# Check for secrets and credentials
+echo "Checking for secrets..."
+if command -v detect-secrets >/dev/null 2>&1; then
+    detect-secrets-hook --baseline .secrets.baseline .
+elif [ -f ".secrets.baseline" ]; then
+    npm run check:secrets || true
+fi
+
+# Run ESLint with security rules
+echo "Running ESLint security scan..."
+npm run lint
+
+# Check for vulnerabilities
+echo "Checking for vulnerabilities..."
+npm audit --audit-level=moderate
+
+echo "Security checks complete!"

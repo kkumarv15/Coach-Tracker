@@ -1,0 +1,54 @@
+# CodeQL Configuration for JavaScript/TypeScript Security Analysis
+# https://codeql.github.com/
+
+name: "Coaching Tracker Security Analysis"
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+
+paths-ignore:
+  - node_modules
+  - dist
+  - build
+  - coverage
+  - '*.test.js'
+  - '*.spec.js'
+  - '**/test/**'
+  - '**/tests/**'
+  - '**/__tests__/**'
+
+exclude-languages:
+  - Python
+  - Java
+  - Go
+
+# Security queries for JavaScript
+javascript:
+  queries:
+    - security:
+        - security/CWE-020
+        - security/CWE-022
+        - security/CWE-078
+        - security/CWE-079
+        - security/CWE-089
+        - security/CWE-094
+        - security/CWE-295
+        - security/CWE-400
+        - security/CWE-502
+        - security/CWE-611
+        - security/CWE-614
+        - security/CWE-639
+        - security/CWE-704
+        - security/CWE-918
+
+# Additional security configurations
+config:
+  # Maximum number of nodes to analyze (prevents timeouts)
+  max-paths: 10000
+  
+  # Enable threading for faster analysis
+  threads: 0
+  
+  # RAM to use for analysis (in MB)
+  ram: 4096
