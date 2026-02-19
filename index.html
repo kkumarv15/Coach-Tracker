@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coaching Tracker App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="screen active">
+        <div class="login-container">
+            <h1>Coaching Tracker</h1>
+            <form id="loginForm">
+                <input type="email" id="loginEmail" placeholder="Email" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+                <button type="submit">Login</button>
+                <p class="hint">Demo: admin@coach.com / password</p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="screen">
+        <!-- Navigation -->
+        <nav class="top-nav">
+            <div class="nav-brand">Coaching Tracker</div>
+            <div class="nav-links">
+                <a href="#" data-tab="dashboard" class="nav-link active">Dashboard</a>
+                <a href="#" data-tab="coachees" class="nav-link">Coachees</a>
+                <a href="#" data-tab="sessions" class="nav-link">Sessions</a>
+                <a href="#" data-tab="lookup" class="nav-link">Lookup</a>
+                <a href="#" data-tab="sources" class="nav-link">Sources</a>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </div>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <h2>Dashboard</h2>
+            
+            <!-- Global Filters -->
+            <div class="dashboard-filters">
+                <div class="filter-group">
+                    <label>Date Range:</label>
+                    <select id="dashDateRange">
+                        <option value="thisMonth">This Month</option>
+                        <option value="thisQuarter">This Quarter</option>
+                        <option value="thisYear">This Year</option>
+                        <option value="allTime" selected>All Time</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Coachee Type:</label>
+                    <select id="dashCoacheeType">
+                        <option value="all">All</option>
+                        <option value="Individual">Individual</option>
+                        <option value="Group">Group</option>
+                        <option value="Team">Team</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Payment Type:</label>
+                    <select id="dashPaymentType" multiple>
+                        <option value="Paid" selected>Paid</option>
+                        <option value="Pro Bono" selected>Pro Bono</option>
+                        <option value="Peer" selected>Peer</option>
+                    </select>
+                </div>
+                <button id="applyDashFilters" class="btn-primary">Apply Filters</button>
+            </div>
+
+            <!-- KPI Strip -->
+            <div class="kpi-strip">
+                <div class="kpi-card">
+                    <h3>Total Hours</h3>
+                    <p class="kpi-value" id="kpiTotalHours">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Total Sessions</h3>
+                    <p class="kpi-value" id="kpiTotalSessions">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Total Clients</h3>
+                    <p class="kpi-value" id="kpiTotalClients">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Avg Sessions/Client</h3>
+                    <p class="kpi-value" id="kpiAvgSessions">0</p>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Sessions by Payment Type</h3>
+                    <canvas id="paymentTypeChart"></canvas>
+                    <div id="paymentTypeText" class="chart-text"></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Sessions by Weekday</h3>
+                    <canvas id="weekdayChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Hours by Calendar Year</h3>
+                    <canvas id="yearChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Clients by Age Group</h3>
+                    <canvas id="ageGroupChart"></canvas>
+                    <div id="ageGroupText" class="chart-text"></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Clients by Sex</h3>
+                    <canvas id="sexChart"></canvas>
+                    <div id="sexText" class="chart-text"></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Hours by Source</h3>
+                    <canvas id="sourceChart"></canvas>
+                    <div id="sourceText" class="chart-text"></div>
+                </div>
+            </div>
+
+            <!-- Top 10 Lists -->
+            <div class="top-lists">
+                <div class="list-card">
+                    <h3>Top 10 Clients by Sessions</h3>
+                    <div id="topClients" class="top-list"></div>
+                </div>
+                <div class="list-card">
+                    <h3>Top 10 Organisations by Sessions</h3>
+                    <div id="topOrganisations" class="top-list"></div>
+                </div>
+            </div>
+
+            <!-- Average Hours -->
+            <div class="avg-hours">
+                <h3>Average Hours Coached</h3>
+                <div class="avg-grid">
+                    <div class="avg-item">
+                        <span>Per Week:</span>
+                        <strong id="avgWeek">0</strong>
+                    </div>
+                    <div class="avg-item">
+                        <span>Per Month:</span>
+                        <strong id="avgMonth">0</strong>
+                    </div>
+                    <div class="avg-item">
+                        <span>Per Year:</span>
+                        <strong id="avgYear">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Data Tables -->
+            <div class="data-tables">
+                <div class="table-card">
+                    <h3>All Coachees</h3>
+                    <input type="text" id="searchCoachees" placeholder="Search by name or organisation..." class="search-input">
+                    <div class="table-scroll">
+                        <table id="allCoacheesTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="name">Name</th>
+                                    <th data-sort="type">Type</th>
+                                    <th data-sort="organisation">Organisation</th>
+                                    <th data-sort="source">Source</th>
+                                    <th data-sort="country">Country</th>
+                                    <th data-sort="city">City</th>
+                                    <th data-sort="sessions">Total Sessions</th>
+                                    <th data-sort="hours">Total Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <h3>All Sessions</h3>
+                    <div class="table-scroll">
+                        <table id="allSessionsTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="date">Date</th>
+                                    <th data-sort="coachee">Coachee Name</th>
+                                    <th data-sort="organisation">Organisation</th>
+                                    <th data-sort="source">Source</th>
+                                    <th data-sort="duration">Duration (hrs)</th>
+                                    <th data-sort="payment">Payment Type</th>
+                                    <th data-sort="theme">Theme</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <h3>All Organisations</h3>
+                    <div class="table-scroll">
+                        <table id="allOrganisationsTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="name">Organisation Name</th>
+                                    <th data-sort="country">Country</th>
+                                    <th data-sort="coachees">Number of Coachees</th>
+                                    <th data-sort="sessions">Number of Sessions</th>
+                                    <th data-sort="hours">Total Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coachees Tab -->
+        <div id="coachees" class="tab-content">
+            <div class="tab-header">
+                <h2>Coachees</h2>
+                <button id="addCoacheeBtn" class="btn-primary">Add Coachee</button>
+            </div>
+            
+            <div class="sub-tabs">
+                <button class="sub-tab active" data-subtab="allCoachees">All Coachees</button>
+            </div>
+
+            <div id="allCoachees" class="sub-tab-content active">
+                <div class="table-scroll">
+                    <table id="coacheesTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Organisation</th>
+                                <th>City</th>
+                                <th>Country</th>
+                                <th>Source</th>
+                                <th>Total Sessions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div id="sessions" class="tab-content">
+            <div class="tab-header">
+                <h2>Sessions</h2>
+                <button id="addSessionBtn" class="btn-primary">Add Session</button>
+            </div>
+
+            <div class="table-scroll">
+                <table id="sessionsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Coachee Name</th>
+                            <th>Organisation</th>
+                            <th>Source</th>
+                            <th>Duration (hrs)</th>
+                            <th>Payment Type</th>
+                            <th>Theme</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Lookup Tab -->
+        <div id="lookup" class="tab-content">
+            <h2>Lookup</h2>
+            
+            <div class="sub-tabs">
+                <button class="sub-tab active" data-subtab="lookupCoachee">Coachee</button>
+                <button class="sub-tab" data-subtab="lookupOrganisation">Organisation</button>
+                <button class="sub-tab" data-subtab="lookupSource">Source</button>
+            </div>
+
+            <!-- Coachee Lookup -->
+            <div id="lookupCoachee" class="sub-tab-content active lookup-layout">
+                <div class="lookup-left">
+                    <div class="filter-group">
+                        <label>Coachee Type:</label>
+                        <select id="lookupCoacheeType">
+                            <option value="all">All</option>
+                            <option value="Individual">Individual</option>
+                            <option value="Group">Group</option>
+                            <option value="Team">Team</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Coachee Name:</label>
+                        <select id="lookupCoacheeName">
+                            <option value="">Select a coachee...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="lookup-right">
+                    <div id="coacheeDetails" class="details-card"></div>
+                    <div id="coacheeSessions" class="sessions-table"></div>
+                </div>
+            </div>
+
+            <!-- Organisation Lookup -->
+            <div id="lookupOrganisation" class="sub-tab-content lookup-layout">
+                <div class="lookup-left">
+                    <div class="filter-group">
+                        <label>Organisation:</label>
+                        <select id="lookupOrganisationName">
+                            <option value="">Select an organisation...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="lookup-right">
+                    <div id="organisationDetails" class="details-card"></div>
+                    <div id="organisationCoachees" class="coachees-table"></div>
+                </div>
+            </div>
+
+            <!-- Source Lookup -->
+            <div id="lookupSource" class="sub-tab-content lookup-layout">
+                <div class="lookup-left">
+                    <div class="filter-group">
+                        <label>Source:</label>
+                        <select id="lookupSourceName">
+                            <option value="">Select a source...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="lookup-right">
+                    <div id="sourceDetails" class="details-card"></div>
+                    <div id="sourceOrganisations" class="organisations-table"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sources Tab -->
+        <div id="sources" class="tab-content">
+            <div class="tab-header">
+                <h2>Sources</h2>
+                <button id="addSourceBtn" class="btn-primary">Add Source</button>
+            </div>
+
+            <div class="table-scroll">
+                <table id="sourcesTable">
+                    <thead>
+                        <tr>
+                            <th>Source Name</th>
+                            <th>Country</th>
+                            <th>Website</th>
+                            <th>Number of Coachees</th>
+                            <th>Number of Sessions</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Coachee Modal -->
+    <div id="coacheeModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="coacheeModalTitle">Add Coachee</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="coacheeForm">
+                <div class="form-section">
+                    <label>Coachee Type:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="coacheeType" value="Individual" checked> Individual</label>
+                        <label><input type="radio" name="coacheeType" value="Group"> Group</label>
+                        <label><input type="radio" name="coacheeType" value="Team"> Team</label>
+                    </div>
+                </div>
+
+                <!-- Individual Fields -->
+                <div id="individualFields" class="coachee-type-fields">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>First Name: *</label>
+                            <input type="text" id="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Second Name:</label>
+                            <input type="text" id="secondName">
+                        </div>
+                        <div class="form-group">
+                            <label>Age Group: *</label>
+                            <select id="ageGroup" required>
+                                <option value="">Select...</option>
+                                <option value="<20">&lt;20</option>
+                                <option value="20-30">20-30</option>
+                                <option value="30-40">30-40</option>
+                                <option value="40-50">40-50</option>
+                                <option value="50+">50+</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sex: *</label>
+                            <select id="sex" required>
+                                <option value="">Select...</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                <option value="Prefer not to say">Prefer not to say</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Email:</label>
+                            <input type="email" id="email">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number:</label>
+                            <input type="tel" id="phone">
+                        </div>
+                        <div class="form-group">
+                            <label>LinkedIn:</label>
+                            <input type="url" id="linkedin" placeholder="https://linkedin.com/in/...">
+                        </div>
+                        <div class="form-group">
+                            <label>Occupation: *</label>
+                            <select id="occupation" required>
+                                <option value="">Select...</option>
+                                <option value="Employed">Employed</option>
+                                <option value="Self-employed">Self-employed</option>
+                                <option value="Business Owner">Business Owner</option>
+                                <option value="Student">Student</option>
+                                <option value="Unemployed">Unemployed</option>
+                                <option value="Retired">Retired</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group/Team Fields -->
+                <div id="groupTeamFields" class="coachee-type-fields" style="display: none;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Group/Team Name: *</label>
+                            <input type="text" id="groupTeamName">
+                        </div>
+                        <div class="form-group">
+                            <label>Number of Participants: *</label>
+                            <input type="number" id="numParticipants" min="1">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Members:</label>
+                            <textarea id="members" rows="3" placeholder="Enter names or notes about members..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Common Fields -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Organisation:</label>
+                        <input type="text" id="organisation" list="organisationList">
+                        <datalist id="organisationList"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>City:</label>
+                        <input type="text" id="city">
+                    </div>
+                    <div class="form-group">
+                        <label>Country:</label>
+                        <input type="text" id="country">
+                    </div>
+                    <div class="form-group">
+                        <label>Source:</label>
+                        <select id="source">
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save & Close</button>
+                    <button type="button" id="saveAndAddAnother" class="btn-secondary">Save & Add Another</button>
+                    <button type="button" class="btn-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Session Modal -->
+    <div id="sessionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="sessionModalTitle">Add Session</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="sessionForm">
+                <div class="form-section">
+                    <label>Coachee Type:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="sessionCoacheeType" value="Individual" checked> Individual</label>
+                        <label><input type="radio" name="sessionCoacheeType" value="Group"> Group</label>
+                        <label><input type="radio" name="sessionCoacheeType" value="Team"> Team</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Coachee Name: *</label>
+                    <select id="sessionCoacheeName" required>
+                        <option value="">Select a coachee...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Session Date: *</label>
+                    <input type="date" id="sessionDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Duration (hours): *</label>
+                    <input type="number" id="duration" step="0.5" min="0.5" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Theme: *</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="theme" value="Habits"> Habits</label>
+                        <label><input type="checkbox" name="theme" value="Well-being"> Well-being</label>
+                        <label><input type="checkbox" name="theme" value="Productivity"> Productivity</label>
+                        <label><input type="checkbox" name="theme" value="Communication"> Communication</label>
+                        <label><input type="checkbox" name="theme" value="Career"> Career</label>
+                        <label><input type="checkbox" name="theme" value="Relationships"> Relationships</label>
+                        <label><input type="checkbox" name="theme" value="Other Personal"> Other Personal</label>
+                        <label><input type="checkbox" name="theme" value="Other Professional"> Other Professional</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Payment Type: *</label>
+                    <select id="paymentType" required>
+                        <option value="">Select...</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Pro Bono">Pro Bono</option>
+                        <option value="Peer">Peer</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Session Notes:</label>
+                    <textarea id="sessionNotes" rows="4"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save & Close</button>
+                    <button type="button" id="saveSessionAndAddAnother" class="btn-secondary">Save & Add Another</button>
+                    <button type="button" class="btn-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Source Modal -->
+    <div id="sourceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="sourceModalTitle">Add Source</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="sourceForm">
+                <div class="form-group">
+                    <label>Source Name: *</label>
+                    <input type="text" id="sourceName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Country:</label>
+                    <input type="text" id="sourceCountry">
+                </div>
+
+                <div class="form-group">
+                    <label>Website:</label>
+                    <input type="url" id="sourceWebsite" placeholder="https://example.com">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save</button>
+                    <button type="button" class="btn-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
