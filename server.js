@@ -60,6 +60,24 @@ const mapSourceRow = (row) => ({
     lastUpdated: row.last_updated
 });
 
+const mapClientProspectRow = (row) => ({
+    id: row.id,
+    clientName: row.client_name,
+    gender: row.gender,
+    ageGroup: row.age_group,
+    city: row.city,
+    country: row.country,
+    role: row.role,
+    company: row.company,
+    industrySector: row.industry_sector,
+    linkedinLink: row.linkedin_link,
+    source: row.source,
+    mobile: row.mobile,
+    email: row.email,
+    createdOn: row.created_on,
+    lastUpdated: row.last_updated
+});
+
 app.get('/api/health', asyncHandler(async (req, res) => {
     try {
         await query('SELECT 1');
@@ -218,6 +236,43 @@ app.put('/api/sessions/:id', asyncHandler(async (req, res) => {
 app.delete('/api/sessions/:id', asyncHandler(async (req, res) => {
     const result = await query('DELETE FROM sessions WHERE id = $1 RETURNING id', [req.params.id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Session not found' });
+    res.status(204).send();
+}));
+
+// Client Prospects API
+app.get('/api/client-prospects', asyncHandler(async (req, res) => {
+    const result = await query('SELECT * FROM client_prospects ORDER BY created_on ASC');
+    res.json(result.rows.map(mapClientProspectRow));
+}));
+
+app.post('/api/client-prospects', asyncHandler(async (req, res) => {
+    const p = req.body;
+    const result = await query(
+        `INSERT INTO client_prospects (
+            id, client_name, gender, age_group, city, country, role, company, industry_sector,
+            linkedin_link, source, mobile, email, created_on, last_updated
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+            COALESCE($14::timestamptz, NOW()), COALESCE($15::timestamptz, NOW())
+        ) ON CONFLICT (id) DO NOTHING
+        RETURNING *`,
+        [
+            p.id, p.client_name, p.gender, p.age_group, p.city, p.country, p.role, p.company,
+            p.industry_sector, p.linkedin_link, p.source, p.mobile, p.email,
+            p.createdOn || null, p.lastUpdated || null
+        ]
+    );
+    if (result.rows.length === 0) {
+        // If already exists, fetch and return
+        const existing = await query('SELECT * FROM client_prospects WHERE id = $1', [p.id]);
+        return res.status(201).json(mapClientProspectRow(existing.rows[0]));
+    }
+    res.status(201).json(mapClientProspectRow(result.rows[0]));
+}));
+
+app.delete('/api/client-prospects/:id', asyncHandler(async (req, res) => {
+    const result = await query('DELETE FROM client_prospects WHERE id = $1 RETURNING id', [req.params.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Client prospect not found' });
     res.status(204).send();
 }));
 

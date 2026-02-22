@@ -10,7 +10,11 @@
     <!-- Login Screen -->
     <div id="loginScreen" class="screen active">
         <div class="login-container">
-            <h1>Coaching Tracker</h1>
+            <!-- Logo -->
+            <div class="logo-container">
+                <img src="logo.png" alt="The Sharpeners" class="logo" onload="this.style.display='inline-block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none';">
+            </div>
+            <h1>The Sharpeners</h1>
             <form id="loginForm">
                 <input type="email" id="loginEmail" placeholder="Email" required>
                 <input type="password" id="loginPassword" placeholder="Password" required>
@@ -24,13 +28,14 @@
     <div id="mainApp" class="screen">
         <!-- Navigation -->
         <nav class="top-nav">
-            <div class="nav-brand">Coaching Tracker</div>
+            <div class="nav-brand">The Sharpeners</div>
             <div class="nav-links">
                 <a href="#" data-tab="dashboard" class="nav-link active">Dashboard</a>
                 <a href="#" data-tab="coachees" class="nav-link">Coachees</a>
                 <a href="#" data-tab="sessions" class="nav-link">Sessions</a>
                 <a href="#" data-tab="lookup" class="nav-link">Lookup</a>
                 <a href="#" data-tab="sources" class="nav-link">Sources</a>
+                <a href="#" data-tab="prospects" class="nav-link">Prospects</a>
                 <button id="logoutBtn" class="logout-btn">Logout</button>
             </div>
         </nav>
@@ -62,11 +67,11 @@
                 </div>
                 <div class="filter-group">
                     <label>Payment Type:</label>
-                    <select id="dashPaymentType" multiple>
-                        <option value="Paid" selected>Paid</option>
-                        <option value="Pro Bono" selected>Pro Bono</option>
-                        <option value="Peer" selected>Peer</option>
-                    </select>
+                    <div class="checkbox-group-inline">
+                        <label><input type="checkbox" name="dashPaymentType" value="Paid" checked> Paid</label>
+                        <label><input type="checkbox" name="dashPaymentType" value="Pro Bono" checked> Pro Bono</label>
+                        <label><input type="checkbox" name="dashPaymentType" value="Peer" checked> Peer</label>
+                    </div>
                 </div>
                 <button id="applyDashFilters" class="btn-primary">Apply Filters</button>
             </div>
@@ -120,6 +125,27 @@
                     <h3>Hours by Source</h3>
                     <canvas id="sourceChart"></canvas>
                     <div id="sourceText" class="chart-text"></div>
+                </div>
+            </div>
+
+            <!-- Active Coachees Overview -->
+            <div class="table-card">
+                <h3>Active Coachees Overview</h3>
+                <p class="card-subtitle">Coachees with at least one session</p>
+                <div class="table-scroll">
+                    <table id="activeCoacheesTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Organisation</th>
+                                <th>Last Session</th>
+                                <th>Total Sessions</th>
+                                <th>Total Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeCoacheesTableBody"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -190,6 +216,7 @@
                                     <th data-sort="duration">Duration (hrs)</th>
                                     <th data-sort="payment">Payment Type</th>
                                     <th data-sort="theme">Theme</th>
+                                    <th data-sort="notes">Notes</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -359,6 +386,74 @@
                             <th>Number of Coachees</th>
                             <th>Number of Sessions</th>
                             <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Prospects Tab -->
+        <div id="prospects" class="tab-content">
+            <div class="tab-header">
+                <h2>Client Prospects</h2>
+            </div>
+            
+            <div class="dashboard-filters">
+                <div class="filter-group">
+                    <label>Search:</label>
+                    <input type="text" id="searchProspects" placeholder="Search by name, company, or role..." class="search-input">
+                </div>
+                <div class="filter-group">
+                    <label>Source:</label>
+                    <select id="filterProspectsSource">
+                        <option value="">All Sources</option>
+                        <option value="company A">Company A</option>
+                        <option value="company B">Company B</option>
+                        <option value="company C">Company C</option>
+                        <option value="direct">Direct</option>
+                        <option value="referral">Referral</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Country:</label>
+                    <select id="filterProspectsCountry">
+                        <option value="">All Countries</option>
+                    </select>
+                </div>
+                <button id="applyProspectsFilters" class="btn-primary">Apply Filters</button>
+            </div>
+
+            <!-- KPI Strip for Prospects -->
+            <div class="kpi-strip">
+                <div class="kpi-card">
+                    <h3>Total Prospects</h3>
+                    <p class="kpi-value" id="kpiTotalProspects">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Companies</h3>
+                    <p class="kpi-value" id="kpiTotalCompanies">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Countries</h3>
+                    <p class="kpi-value" id="kpiTotalCountries">0</p>
+                </div>
+            </div>
+
+            <div class="table-scroll">
+                <table id="prospectsTable">
+                    <thead>
+                        <tr>
+                            <th>Client Name</th>
+                            <th>Role</th>
+                            <th>Company</th>
+                            <th>Industry/Sector</th>
+                            <th>City</th>
+                            <th>Country</th>
+                            <th>Source</th>
+                            <th>Mobile</th>
+                            <th>Email</th>
+                            <th>LinkedIn</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

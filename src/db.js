@@ -32,6 +32,13 @@ const initDatabase = async () => {
     const schemaPath = path.join(__dirname, '..', 'sql', 'schema.sql');
     const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
     await pool.query(schemaSql);
+    
+    // Load client_prospects schema if exists
+    const clientProspectsPath = path.join(__dirname, '..', 'sql', 'client_prospects.sql');
+    if (fs.existsSync(clientProspectsPath)) {
+        const clientProspectsSql = fs.readFileSync(clientProspectsPath, 'utf-8');
+        await pool.query(clientProspectsSql);
+    }
 };
 
 module.exports = {

@@ -9,6 +9,7 @@ class CoachingTracker {
         this.coachees = [];
         this.sessions = [];
         this.sources = [];
+        this.prospects = [];
         this.charts = {};
         this.editingCoachee = null;
         this.editingSession = null;
@@ -290,9 +291,15 @@ class CoachingTracker {
     }
 
     login(email, password) {
-        // Simple demo authentication
-        if (email === 'admin@coach.com' && password === 'password') {
-            this.currentUser = { email, name: 'Demo Coach' };
+        // Demo authentication with multiple users
+        const users = {
+            'admin@coach.com': { password: 'password', name: 'Admin Coach' },
+            'saurabh@coach.com': { password: 'saurabh123', name: 'Saurabh' },
+            'vivek@coach.com': { password: 'vivek123', name: 'Vivek' }
+        };
+
+        if (users[email] && users[email].password === password) {
+            this.currentUser = { email, name: users[email].name };
             localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
             this.showMainApp();
             this.showToast('Login successful!');
@@ -787,7 +794,7 @@ class CoachingTracker {
         const filters = {
             dateRange: document.getElementById('dashDateRange').value,
             coacheeType: document.getElementById('dashCoacheeType').value,
-            paymentTypes: Array.from(document.getElementById('dashPaymentType').selectedOptions).map(o => o.value)
+            paymentTypes: Array.from(document.querySelectorAll('input[name="dashPaymentType"]:checked')).map(o => o.value)
         };
 
         const data = this.getDashboardData(filters);
@@ -820,6 +827,7 @@ class CoachingTracker {
         this.renderAllCoacheesTable();
         this.renderAllSessionsTable();
         this.renderAllOrganisationsTable();
+        this.renderActiveCoacheesTable();
     }
 
     renderPaymentTypeChart(sessions) {
@@ -1088,6 +1096,7 @@ class CoachingTracker {
             const coacheeName = coachee ? this.getCoacheeName(coachee) : 'Unknown';
             const org = coachee?.organisation || '';
             const sourceName = coachee?.sourceId ? (this.getSource(coachee.sourceId)?.name || '') : '';
+            const notes = s.notes || '-';
             return `
                 <tr>
                     <td>${this.formatDate(s.sessionDate)}</td>
@@ -1097,10 +1106,11 @@ class CoachingTracker {
                     <td>${s.duration}</td>
                     <td>${s.paymentType}</td>
                     <td>${Array.isArray(s.theme) ? s.theme.join(', ') : s.theme}</td>
+                    <td>${notes}</td>
                 </tr>
             `;
         }).join('');
-        tbody.innerHTML = html || '<tr><td colspan="7" class="empty-state">No sessions found</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="8" class="empty-state">No sessions found</td></tr>';
     }
 
     renderAllOrganisationsTable() {
@@ -1117,6 +1127,44 @@ class CoachingTracker {
             </tr>
         `).join('');
         tbody.innerHTML = html || '<tr><td colspan="5" class="empty-state">No organisations found</td></tr>';
+    }
+
+    renderActiveCoacheesTable() {
+        const tbody = document.getElementById('activeCoacheesTableBody');
+        
+        // Get coachees with at least one session
+        const activeCoacheeIds = new Set(this.sessions.map(s => s.coacheeId));
+        const activeCoachees = this.coachees.filter(c => activeCoacheeIds.has(c.id));
+
+        // Sort by last session date (most recent first)
+        activeCoachees.sort((a, b) => {
+            const aSessions = this.getSessionsForCoachee(a.id);
+            const bSessions = this.getSessionsForCoachee(b.id);
+            const aLastSession = aSessions.length > 0 ? new Date(aSessions[0].sessionDate) : new Date(0);
+            const bLastSession = bSessions.length > 0 ? new Date(bSessions[0].sessionDate) : new Date(0);
+            return bLastSession - aLastSession;
+        });
+
+        const html = activeCoachees.map(c => {
+            const stats = this.getCoacheeStats(c.id);
+            const sessions = this.getSessionsForCoachee(c.id);
+            // Get most recent session date
+            const sortedSessions = [...sessions].sort((a, b) => new Date(b.sessionDate) - new Date(a.sessionDate));
+            const lastSessionDate = sortedSessions.length > 0 ? this.formatDate(sortedSessions[0].sessionDate) : 'N/A';
+            
+            return `
+                <tr>
+                    <td>${this.getCoacheeName(c)}</td>
+                    <td>${c.type}</td>
+                    <td>${c.organisation || ''}</td>
+                    <td>${lastSessionDate}</td>
+                    <td>${stats.totalSessions}</td>
+                    <td>${stats.totalHours}</td>
+                </tr>
+            `;
+        }).join('');
+
+        tbody.innerHTML = html || '<tr><td colspan="6" class="empty-state">No active coachees found</td></tr>';
     }
 
     renderCoacheesTable() {
@@ -1324,6 +1372,15 @@ class CoachingTracker {
             this.renderAllCoacheesTable();
         });
 
+        // Prospects filters
+        document.getElementById('applyProspectsFilters').addEventListener('click', () => {
+            this.loadProspects();
+        });
+
+        document.getElementById('searchProspects').addEventListener('input', () => {
+            this.loadProspects();
+        });
+
         // Lookup filters
         document.getElementById('lookupCoacheeType').addEventListener('change', () => {
             this.updateLookupCoacheeDropdown();
@@ -1357,6 +1414,8 @@ class CoachingTracker {
 
         if (tabName === 'dashboard') {
             this.renderDashboard();
+        } else if (tabName === 'prospects') {
+            this.loadProspects();
         }
     }
 
@@ -1971,6 +2030,74 @@ class CoachingTracker {
         const organisations = [...new Set(this.coachees.map(c => c.organisation).filter(o => o))];
         const options = organisations.map(org => `<option value="${org}">`).join('');
         datalist.innerHTML = options;
+    }
+
+    // ==================== PROSPECTS MANAGEMENT ====================
+    
+    async loadProspects() {
+        try {
+            this.prospects = await this.apiRequest('/client-prospects');
+            this.renderProspectsTable();
+            this.updateProspectsKPI();
+            this.updateProspectsCountryFilter();
+        } catch (error) {
+            console.error('Failed to load prospects:', error);
+            this.showToast('Failed to load prospects', 'error');
+        }
+    }
+
+    renderProspectsTable() {
+        const tbody = document.getElementById('prospectsTable').querySelector('tbody');
+        const searchTerm = document.getElementById('searchProspects').value.toLowerCase();
+        const sourceFilter = document.getElementById('filterProspectsSource').value;
+        const countryFilter = document.getElementById('filterProspectsCountry').value;
+
+        let filtered = this.prospects.filter(p => {
+            const matchesSearch = !searchTerm || 
+                (p.clientName || '').toLowerCase().includes(searchTerm) ||
+                (p.company || '').toLowerCase().includes(searchTerm) ||
+                (p.role || '').toLowerCase().includes(searchTerm);
+            
+            const matchesSource = !sourceFilter || p.source === sourceFilter;
+            const matchesCountry = !countryFilter || p.country === countryFilter;
+            
+            return matchesSearch && matchesSource && matchesCountry;
+        });
+
+        const html = filtered.map(p => `
+            <tr>
+                <td>${p.clientName || ''}</td>
+                <td>${p.role || ''}</td>
+                <td>${p.company || ''}</td>
+                <td>${p.industrySector || ''}</td>
+                <td>${p.city || ''}</td>
+                <td>${p.country || ''}</td>
+                <td>${p.source || ''}</td>
+                <td>${p.mobile || ''}</td>
+                <td>${p.email || ''}</td>
+                <td>${p.linkedinLink ? `<a href="${p.linkedinLink}" target="_blank">LinkedIn</a>` : ''}</td>
+            </tr>
+        `).join('');
+
+        tbody.innerHTML = html || '<tr><td colspan="10" class="empty-state">No prospects found</td></tr>';
+    }
+
+    updateProspectsKPI() {
+        const totalProspects = this.prospects.length;
+        const companies = [...new Set(this.prospects.map(p => p.company).filter(c => c))];
+        const countries = [...new Set(this.prospects.map(p => p.country).filter(c => c))];
+
+        document.getElementById('kpiTotalProspects').textContent = totalProspects;
+        document.getElementById('kpiTotalCompanies').textContent = companies.length;
+        document.getElementById('kpiTotalCountries').textContent = countries.length;
+    }
+
+    updateProspectsCountryFilter() {
+        const select = document.getElementById('filterProspectsCountry');
+        const countries = [...new Set(this.prospects.map(p => p.country).filter(c => c))].sort();
+        
+        const options = countries.map(c => `<option value="${c}">${c}</option>`).join('');
+        select.innerHTML = '<option value="">All Countries</option>' + options;
     }
 }
 
