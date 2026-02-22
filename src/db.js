@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const dns = require('dns');
+
+// Force IPv4 DNS resolution
+dns.setDefaultResultOrder('ipv4first');
 
 // Support both individual params and full connection string (for Supabase)
 const pool = new Pool({
