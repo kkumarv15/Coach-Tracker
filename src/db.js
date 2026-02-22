@@ -13,9 +13,7 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD || 'postgres',
     database: process.env.DB_NAME || 'coaching_tracker',
     // Supabase requires SSL
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    // Force IPv4 to avoid IPv6 connection issues
-    family: 4
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
 const query = (text, params = []) => pool.query(text, params);
