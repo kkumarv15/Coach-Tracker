@@ -2,13 +2,18 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 
+// Support both individual params and full connection string (for Supabase)
 const pool = new Pool({
-    // Use IPv4 loopback by default to avoid localhost -> ::1 issues on some systems
+    // If DATABASE_URL is provided (e.g., Supabase), use it directly
+    connectionString: process.env.DATABASE_URL || undefined,
+    // Fallback to individual params for local development
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT || 5432),
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
-    database: process.env.DB_NAME || 'coaching_tracker'
+    database: process.env.DB_NAME || 'coaching_tracker',
+    // Supabase requires SSL
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
 const query = (text, params = []) => pool.query(text, params);
