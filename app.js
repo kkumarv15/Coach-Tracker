@@ -3,7 +3,10 @@
 
 class CoachingTracker {
     constructor() {
-        this.apiBase = '/api';
+        // Use Render backend in production, local for development
+        this.apiBase = window.location.hostname === 'localhost' 
+            ? '/api' 
+            : 'https://coaching-tracker-backend.onrender.com/api';
         this.dataLoaded = false;
         this.currentUser = null;
         this.coachees = [];
